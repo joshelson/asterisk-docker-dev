@@ -70,7 +70,7 @@ docker run -it --rm --name asterisk-dev \
   -p 5060:5060/udp -p 5038:5038 -p 10000-10100:10000-10100/udp \
   -v $HOME/dev/asterisk:/usr/src/asterisk \
   -v $HOME/.bash_history:/root/.bash_history \
-  --entrypoint /bin/bash asterisk-dev-container
+   --entrypoint /bin/bash asterisk-dev-container
 ```
 
 ## Container Management
@@ -100,7 +100,7 @@ docker run -it --rm --name asterisk-dev \
   -v $HOME/dev/asterisk:/usr/src/asterisk \
   -v $HOME/dev/testsuite:/usr/src/testsuite \
   -v $HOME/.bash_history:/root/.bash_history \
-  --entrypoint /bin/bash asterisk-dev-container
+   --entrypoint /bin/bash asterisk-dev-container
 ```
 
 #### Persistent Mode (Recommended - Container stays running)
@@ -177,8 +177,8 @@ docker rmi asterisk-dev-container
 
 3. **Install Asterisk**:
    ```bash
-   make install
-   make samples
+make install
+make samples
    make config
    ```
 
@@ -291,10 +291,42 @@ ENV LIBSRTP_VERSION=2.7.0
 
 ### Common Issues
 
-#### Container Won't Start
+#### Port Already in Use Error
+If you see: `Bind for 0.0.0.0:5060 failed: port is already allocated`
+
+**Quick Fix (Recommended):**
 ```bash
-# Check if ports are in use
+# Use the --force option to automatically kill conflicting processes
+./restart-docker.sh --force --persistent
+```
+
+**Manual Troubleshooting:**
+```bash
+# Find what's using the port
+sudo lsof -i :5060
+# or
 netstat -tulpn | grep :5060
+
+# Check if another Docker container is using the port
+docker ps --format "table {{.Names}}\t{{.Ports}}" | grep 5060
+
+# Stop conflicting Docker containers
+docker stop $(docker ps -q --filter "publish=5060")
+
+# Kill process using the port (if it's not Docker)
+sudo kill -9 <PID_FROM_LSOF>
+
+# Remove existing container with same name
+docker rm -f asterisk-dev
+```
+
+#### Container Won't Start (General)
+```bash
+# Check Docker daemon status
+docker info
+
+# Check available disk space
+df -h
 
 # Remove existing container
 docker rm -f asterisk-dev
@@ -357,6 +389,29 @@ Reduce the RTP port range if container hangs:
    # Inside container
    netstat -tulpn
    ss -tulpn
+   ```
+
+4. **Port Conflict Diagnostics**:
+   ```bash
+   # Quick port check
+   sudo lsof -i :5060
+   sudo lsof -i :5038
+   
+   # Check all Docker containers and their ports
+   docker ps --format "table {{.Names}}\t{{.Ports}}"
+   
+   # Find processes using Asterisk ports
+   sudo netstat -tulpn | grep -E ':(5060|5038|10000)'
+   ```
+
+5. **Container Networking Issues**:
+   ```bash
+   # Check Docker network
+   docker network ls
+   docker network inspect bridge
+   
+   # Test container connectivity
+   docker exec -it asterisk-dev ping google.com
    ```
 
 ## Advanced Usage
@@ -426,6 +481,9 @@ The repository includes convenience scripts to streamline development:
 
 # Persistent mode (container stays running - RECOMMENDED)
 ./restart-docker.sh --persistent
+
+# Force kill conflicting processes automatically
+./restart-docker.sh --force --persistent
 
 # With custom Asterisk source path
 ./restart-docker.sh --persistent /path/to/your/asterisk/source
