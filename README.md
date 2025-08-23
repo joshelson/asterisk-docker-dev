@@ -90,7 +90,7 @@ docker build -t asterisk-dev-container:v2.0 .
 
 ### Running the Container
 
-#### Development Mode (Recommended)
+#### Interactive Mode (Exits when you exit shell)
 ```bash
 docker run -it --rm --name asterisk-dev \
   -p 5060:5060/udp -p 5060:5060/tcp \
@@ -101,6 +101,35 @@ docker run -it --rm --name asterisk-dev \
   -v $HOME/dev/testsuite:/usr/src/testsuite \
   -v $HOME/.bash_history:/root/.bash_history \
   --entrypoint /bin/bash asterisk-dev-container
+```
+
+#### Persistent Mode (Recommended - Container stays running)
+```bash
+# Start container in detached mode (runs in background)
+docker run -d --name asterisk-dev \
+  -p 5060:5060/udp -p 5060:5060/tcp \
+  -p 5038:5038/tcp \
+  -p 10000-10100:10000-10100/udp \
+  -h asterisk-dev-container \
+  -v $HOME/dev/asterisk:/usr/src/asterisk \
+  -v $HOME/dev/testsuite:/usr/src/testsuite \
+  -v $HOME/.bash_history:/root/.bash_history \
+  --entrypoint tail asterisk-dev-container -f /dev/null
+
+# Enter the running container
+docker exec -it asterisk-dev /bin/bash
+
+# Exit the shell (container keeps running)
+exit
+
+# Re-enter anytime
+docker exec -it asterisk-dev /bin/bash
+
+# Stop the container when done
+docker stop asterisk-dev
+
+# Remove the container
+docker rm asterisk-dev
 ```
 
 #### Production Testing Mode
@@ -271,6 +300,27 @@ netstat -tulpn | grep :5060
 docker rm -f asterisk-dev
 ```
 
+#### Container Management
+```bash
+# Check if container is running
+docker ps
+
+# Enter a running persistent container
+docker exec -it asterisk-dev /bin/bash
+
+# Check container logs
+docker logs asterisk-dev
+
+# Stop persistent container
+docker stop asterisk-dev
+
+# Start stopped container
+docker start asterisk-dev
+
+# Remove container completely
+docker rm asterisk-dev
+```
+
 #### Build Architecture Conflicts
 ```bash
 # Clean Asterisk build artifacts
@@ -371,11 +421,17 @@ The repository includes convenience scripts to streamline development:
 
 #### Restart Script
 ```bash
-# Quick restart with default Asterisk path
+# Interactive mode (exits when you exit shell)
 ./restart-docker.sh
 
-# Restart with custom Asterisk source path
-./restart-docker.sh /path/to/your/asterisk/source
+# Persistent mode (container stays running - RECOMMENDED)
+./restart-docker.sh --persistent
+
+# With custom Asterisk source path
+./restart-docker.sh --persistent /path/to/your/asterisk/source
+
+# Show all options
+./restart-docker.sh --help
 ```
 
 ## Contributing
