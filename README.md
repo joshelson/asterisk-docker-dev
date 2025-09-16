@@ -50,7 +50,7 @@ This Docker environment provides a complete Asterisk development setup based on 
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/joshelson/asterisk-docker-dev.git
 cd asterisk-docker-dev
 
 # Build the container (using helper script)
@@ -70,7 +70,7 @@ docker run -it --rm --name asterisk-dev \
   -p 5060:5060/udp -p 5038:5038 -p 10000-10100:10000-10100/udp \
   -v $HOME/dev/asterisk:/usr/src/asterisk \
   -v $HOME/.bash_history:/root/.bash_history \
-   --entrypoint /bin/bash asterisk-dev-container
+  --entrypoint /bin/bash asterisk-dev-container
 ```
 
 ## Container Management
@@ -100,7 +100,7 @@ docker run -it --rm --name asterisk-dev \
   -v $HOME/dev/asterisk:/usr/src/asterisk \
   -v $HOME/dev/testsuite:/usr/src/testsuite \
   -v $HOME/.bash_history:/root/.bash_history \
-   --entrypoint /bin/bash asterisk-dev-container
+  --entrypoint /bin/bash asterisk-dev-container
 ```
 
 #### Persistent Mode (Recommended - Container stays running)
@@ -177,8 +177,8 @@ docker rmi asterisk-dev-container
 
 3. **Install Asterisk**:
    ```bash
-make install
-make samples
+   make install
+   make samples
    make config
    ```
 
@@ -319,6 +319,39 @@ sudo kill -9 <PID_FROM_LSOF>
 # Remove existing container with same name
 docker rm -f asterisk-dev
 ```
+
+#### Container Name Conflict Error
+If you see: `Conflict. The container name "/asterisk-dev" is already in use`
+
+This happens when a container with the same name already exists (even if stopped). You have three options:
+
+**Option 1: Use the restart script (RECOMMENDED)**
+```bash
+# The restart script automatically handles existing containers
+./restart-docker.sh --persistent
+```
+
+**Option 2: Start the existing container (if it matches your needs)**
+```bash
+# Check if container exists and what it was configured with
+docker ps -a --filter "name=asterisk-dev"
+
+# Start the existing container (if ports/volumes match what you need)
+docker start asterisk-dev
+docker exec -it asterisk-dev /bin/bash
+```
+
+**Option 3: Remove and create new (manual approach)**
+```bash
+# Remove existing container
+docker rm -f asterisk-dev
+
+# Then run your docker command
+docker run -d --name asterisk-dev ...
+```
+
+**Why can't Docker just reuse the name?**
+Docker requires unique container names. Even stopped containers reserve their names until removed. This prevents accidental conflicts and data loss.
 
 #### Container Won't Start (General)
 ```bash
